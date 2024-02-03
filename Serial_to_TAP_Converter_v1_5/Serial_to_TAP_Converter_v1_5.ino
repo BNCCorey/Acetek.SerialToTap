@@ -38,7 +38,7 @@
 
    v1.6
    - Heavy refactor to use a queue for messages and change control flow
-   
+
 
 
 */
@@ -53,11 +53,11 @@ int EOT = 0x04;
 int ENQ = 0x05;
 int ACK = 0x06;
 int ESC = 0x1b;
-int newLineN = 0x4e; // N
-int newLineA = 0x41; // A
-int newLine = 0x0A;  // <LF>
-int CR = 0x0D;       // <CR>
-String CapCode = "919";             // Capcode appended to incoming strings.
+int newLineN = 0x4e;    // N
+int newLineA = 0x41;    // A
+int newLine = 0x0A;     // <LF>
+int CR = 0x0D;          // <CR>
+String CapCode = "919"; // Capcode appended to incoming strings.
 
 // VARIABLES
 
@@ -86,8 +86,6 @@ int port = 7000;                    // TAP Server Port
 // END NETWORK CONFIG
 // No end user config should be performed below
 ///////////////////////////////////////////////////
-
-
 
 struct Message
 {
@@ -137,8 +135,6 @@ Message dequeue()
   itemCount--;
   return message;
 }
-
-
 
 void setup()
 {

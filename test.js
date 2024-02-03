@@ -16,20 +16,19 @@ port.open(function (err) {
   }
   setTimeout(() => {
     // for loop with each loop delayed by a variable to send another variable amoutn of strings to the serial port
-    for (let i = 1; i <= 20; i++) {
-      port.write(`#Duress #Cancelled #Fob ${i} #Main Hub\r`, function (err) {
-        if (err) {
-          return console.log("Error on write: ", err.message);
-        }
-        console.log(`#Duress #Cancelled #Fob ${i} #Main Hub\r`);
-      });
-      // ensure this write is done
-      port.drain();
+    for (let i = 1; i <= 100; i++) {
+      setTimeout(() => {
+        port.write(`#Duress #Cancelled #Fob ${i} #Main Hub\r`, function (err) {
+          if (err) {
+            return console.log("Error on write: ", err.message);
+          }
+          console.log(`#Duress #Cancelled #Fob ${i} #Main Hub\r`);
+        });
+        port.drain();
+      }, i * 50);
     }
   }, 2000);
 });
-
-
 
 // Adjust the delay as needed
 port.on("error", function (err) {
