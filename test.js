@@ -23,12 +23,13 @@ port.open(function (err) {
         }
         console.log(`#Duress #Cancelled #Fob ${i} #Main Hub\r`);
       });
-
       // ensure this write is done
       port.drain();
     }
   }, 2000);
 });
+
+
 
 // Adjust the delay as needed
 port.on("error", function (err) {

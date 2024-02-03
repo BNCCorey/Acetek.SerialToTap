@@ -1,9 +1,11 @@
 /* Serial to TAP converter Universal Base
    --------------------------------------
-   Last Modified: 31-01-2024
-   Modified by: Michael Wilmshurst
+   Last Modified: 03/02/2024
+   Modified by: Corey Johnson
 
-   Build Version: 1.4
+   Original Author: Corey Johnson  - CSJ Consulting
+
+   Build Version: 1.6
 
    Change log
    ---------------------------------------------
@@ -30,8 +32,14 @@
 
    v1.4
    - Stop Tx of <CR> only incoming serial lines of text as it locks up acs port
+
    v1.5
    - pulled wakeup <CR> out of loop it should NOT have been in
+
+   v1.6
+   - Heavy refactor to use a queue for messages and change control flow
+   
+
 
 */
 
@@ -49,13 +57,13 @@ int newLineN = 0x4e; // N
 int newLineA = 0x41; // A
 int newLine = 0x0A;  // <LF>
 int CR = 0x0D;       // <CR>
+String CapCode = "919";             // Capcode appended to incoming strings.
 
 // VARIABLES
 
 #define MAX_QUEUE_SIZE 10   // Define the maximum size of the queue
 #define MAX_FAILURE_COUNT 2 // Define the maximum size of the queue
-#define BUFFER_SIZE 200     // Define the maximum size of the queue
-
+#define BUFFER_SIZE 100     // Define the maximum size of the queue
 bool DEBUG = false;
 
 ////////////////////////////////////////////////////
@@ -73,16 +81,13 @@ IPAddress subnet(255, 255, 255, 0);                // Subnet of this Arduino
 // Server Settings
 IPAddress server(192, 168, 0, 103); // TAP Server IP (TAP PARSER ACS110)
 int port = 7000;                    // TAP Server Port
-String CapCode = "919";             // Capcode appended to incoming strings.
 
 ///////////////////////////////////////////////////
 // END NETWORK CONFIG
 // No end user config should be performed below
 ///////////////////////////////////////////////////
 
-///////////////////////////////////////////////////
-// Messaging Functions
-///////////////////////////////////////////////////
+
 
 struct Message
 {
@@ -133,9 +138,7 @@ Message dequeue()
   return message;
 }
 
-///////////////////////////////////////////////////
-// Business Logic
-///////////////////////////////////////////////////
+
 
 void setup()
 {
@@ -144,108 +147,115 @@ void setup()
   Ethernet.begin(mac, ip, gateway, subnet);
 }
 
-void checkAndQueueSerialData()
+void readSerial()
 {
+  static char incomingData[BUFFER_SIZE];
+  static int dataLength = 0;
 
-  if (Serial.available())
+  while (Serial.available())
   {
-    char incomingData[BUFFER_SIZE]; // Buffer to store incoming data
+    char ch = Serial.read();
 
-    if (Serial.peek() == 13)
+    // Handle message end (CR) and possibly other conditions
+    if (ch == CR || dataLength >= BUFFER_SIZE - 1 || ch == '\n' || ch == '\r' || ch == '\0')
     {
-      Serial.read();
-      return;
-    };
-    // Read until <CR>
-    Serial.readBytesUntil(CR, incomingData, BUFFER_SIZE);
-
-    if (incomingData[0] == 13)
-    {
-      String(serialIn) = "Blank Line do Nothing";
-    }
-
-    String Output = String(incomingData);
-    strcpy(incomingData, Output.c_str());
-
-    Message message;
-    message.data = Output;
-
-    //////////////////
-    // CheckSum
-    //////////////////
-
-    // Part 1:-
-    // Convert to Decimal, and message.checkSum them all together
-    // Create a 12 digit long binary string
-
-    int sum = 0;
-
-    // Data Segment
-    for (int b = 0; b < BUFFER_SIZE; b++)
-    {
-      if (incomingData[b] == '\0')
-      {
-        break;
+      if (dataLength > 0)
+      {                                  // ensure there's data to process
+        incomingData[dataLength] = '\0'; // null-terminate the string
+        calculateCheckSumAndEnqueue(incomingData);
       }
-      sum += incomingData[b];
+      // Reset for next message
+      memset(incomingData, 0, BUFFER_SIZE);
+      dataLength = 0;
     }
-
-    // Capcode Segment
-    for (int b = 0; b <= (sizeof(CapCode) / 2); b++)
+    else
     {
-      sum += CapCode[b];
+      // Accumulate data
+      incomingData[dataLength++] = ch;
     }
-
-    // Control Characters Segment
-    // Add Constant Value of 31;
-    // <STX> = 2
-    // <CR>  = 13
-    // <CR>  = 13
-    // <ETX> = 3
-    //       +
-    // ============
-    // Total = 31
-
-    sum += 31;
-
-    // Part 2:-
-    // Split 12 bit string into 3 sections,
-    // string where; AAAA-BBBB-CCCC
-    // use bitmasks and shifting to split to values
-
-    int MaskA = 3840; // B111100000000
-    int A = (sum & MaskA) >> 8;
-    int MaskB = 240; // B000011110000
-    int B = (sum & MaskB) >> 4;
-    int MaskC = 15; // B000000001111
-    int C = (sum & MaskC);
-
-    // Add Decimal 48 as per checksum specification
-    A += 48;
-    B += 48;
-    C += 48;
-
-    // make a string with these chars
-    message.checkSum = String(A) + String(B) + String(C);
-
-    if (DEBUG)
-    {
-      Serial.print("Checksum: ");
-      Serial.println(message.checkSum);
-
-      Serial.print("Data: ");
-      Serial.println(message.data);
-    }
-
-    // Enqueue the message
-    if (!isQueueFull())
-    {
-      enqueue(message);
-    }
-
-    // clear the buffer
-    memset(incomingData, 0, sizeof(incomingData));
   }
+}
+
+void calculateCheckSumAndEnqueue(char *data)
+{
+  String messageStr(data);
+
+  Message message;
+  message.data = messageStr;
+  // ... rest of your processing and checksum code ...
+
+  // CheckSum
+  //////////////////
+
+  // Part 1:-
+  // Convert to Decimal, and message.checkSum them all together
+  // Create a 12 digit long binary string
+
+  int sum = 0;
+
+  // Data Segment
+  for (int b = 0; b < BUFFER_SIZE; b++)
+  {
+    if (messageStr[b] == '\0')
+    {
+      break;
+    }
+    sum += messageStr[b];
+  }
+
+  // Capcode Segment
+  for (int b = 0; b <= (sizeof(CapCode) / 2); b++)
+  {
+    sum += CapCode[b];
+  }
+
+  // Control Characters Segment
+  // Add Constant Value of 31;
+  // <STX> = 2
+  // <CR>  = 13
+  // <CR>  = 13
+  // <ETX> = 3
+  //       +
+  // ============
+  // Total = 31
+
+  sum += 31;
+
+  // Part 2:-
+  // Split 12 bit string into 3 sections,
+  // string where; AAAA-BBBB-CCCC
+  // use bitmasks and shifting to split to values
+
+  int MaskA = 3840; // B111100000000
+  int A = (sum & MaskA) >> 8;
+  int MaskB = 240; // B000011110000
+  int B = (sum & MaskB) >> 4;
+  int MaskC = 15; // B000000001111
+  int C = (sum & MaskC);
+
+  // Add Decimal 48 as per checksum specification
+  A += 48;
+  B += 48;
+  C += 48;
+
+  // make a string with these chars
+  message.checkSum = String(A) + String(B) + String(C);
+
+  if (DEBUG)
+  {
+    Serial.print("Checksum: ");
+    Serial.println(message.checkSum);
+
+    Serial.print("Data: ");
+    Serial.println(message.data);
+  }
+
+  // Enqueue the message
+  while (isQueueFull())
+  {
+    delay(500); // Wait for space in the queue
+  }
+  enqueue(message);
 }
 
 void processAndTransmitQueuedMessages()
@@ -408,6 +418,6 @@ bool transmitTCP(Message msg)
 
 void loop()
 {
-  checkAndQueueSerialData();
+  readSerial();
   processAndTransmitQueuedMessages();
 }
