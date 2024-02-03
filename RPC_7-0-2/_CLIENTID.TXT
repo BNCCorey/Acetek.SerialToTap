@@ -1,0 +1,16 @@
+; - Use this file to force the server to apply a specific CLIENT ID for each defined "user".
+; - A leading semicolon character ";" comments-out the line.
+; - Rename this file to CLIENTID.TXT before use.
+; - Optionally, specify a custom file and path by running the client with a command line parameter:
+;
+;PNC.EXE CLIENTIDFILE=\\mypath\myclientidfile.txt
+;
+; - Each login "user" entry must be on its own line, and contain the following comma-delimited fields:
+;
+;   <prompted login name>,<client id to apply>,<optional password>
+;
+; - Client ID field must be a numeric value in the range of 0 to 999.
+;
+;John Smith,100,1234
+;4th Floor Maternity Dept.,9,1234
+;Switchboard,305

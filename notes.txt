@@ -1,0 +1,8 @@
+RPC is for sending serials
+
+
+
+FOR SIC
+
+Set to TCP
+administrator

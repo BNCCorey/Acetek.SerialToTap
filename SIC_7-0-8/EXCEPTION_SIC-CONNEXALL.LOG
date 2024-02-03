@@ -1,0 +1,3 @@
+--Application info : SIC , SIC-Connexall , Standard Input Client , 7.0.8  New client on: HARBINGER--
+Feb 3/2024 11:00:21:767 [COM    ]: ERROR! Opening serial port: ie_BadId - Specified comport doesn't exist.
+Feb 3/2024 11:00:23:498 [COM    ]: ERROR! Opening serial port: ie_BadId - Specified comport doesn't exist.

@@ -1,0 +1,20 @@
+; - Use this file to force the server to apply a specific CLIENT ID based on the computer name.
+; - A leading semicolon character ";" comments-out the line.
+; - Rename this file to AUTOCLIENTID.TXT before use.
+; - Optionally, specify a custom file and path or a URL by running the client with a command line parameter:
+;
+;PNC.EXE AUTOCLIENTIDFILE=\\mypath\myclientidfile.txt
+;PNC.EXE AUTOCLIENTIDFILE=http://192.168.0.1:9001/files//myautoclientidfile.txt
+;
+; - The format is similar to the format in INI files where the section is the client type, the key is the computer name and the value is the client id.
+; - Additionaly, a "Default" key can be added so that the value assigned to it can be applied if the computer name key is not found:
+;
+;   [<client type>]
+;   <computer name>=<client id>
+;   Default=<client id>
+;
+; - Client ID field must be a numeric value in the range of 0 to 999.
+;
+;[PNC]
+;OR-PC-1=101
+;Default=0

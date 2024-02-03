@@ -1,0 +1,5 @@
+{
+    "sketch": "Serial_to_TAP_Converter_v1_5\\Serial_to_TAP_Converter_v1_5.ino",
+    "board": "arduino:avr:uno",
+    "port": "COM7"
+}

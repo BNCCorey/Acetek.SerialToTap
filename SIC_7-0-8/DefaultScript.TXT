@@ -1,0 +1,745 @@
+procedure ProcessNewPageMessage (var PagerID: integer; var TextMessage: string; var AbortDefaultHandling: Boolean);
+begin
+  {
+  Note: This procedure is called when a new page message is detected by the SIC. It can be used to
+        modify the received pager ID and/or the message text *prior* to the GUI logic acting on the results.
+
+        If desired, the GUI parsing logic can be completely bypassed if the "AbortDefaultHandling" parameter
+        is set to "True". This allows the script to completely control how each incoming message is to be processed.
+
+  Example:
+
+    if Pos ('BLUE', Uppercase (TextMessage)) > 0 then
+    begin
+      PagerID := 9999; //redirect all code blue pages to device alias 9999
+    end
+    else if PagerID = 1234 then
+    begin
+      AbortDefaultHandling := True; //completely ignore any messages directed at pager 1234
+    end;
+  }
+end;
+
+procedure InitializeScript;
+begin
+  //Implement any required initialization code here that should be executed when the script is first run.
+  //Example: preset variables, start the timer, etc.
+end;
+
+
+procedure FinalizeScript;
+begin
+  //Implement any required finalization code here that should be executed when the script stops running.
+  //Example: clean memory, free objects, etc.
+end;
+
+
+procedure TimerEvent;
+begin
+  //Implement code that must be called on a regular basis (for state machines, etc.)
+  //Note: refer to Command.EnableTimer, Command.DisableTimer and Command.RunWhileHostOffline procedures to enable/disable timer events.
+end;
+
+
+//Note: the following "Command.XYZ" methods can be used in any of the script procedures.
+
+
+procedure MySampleProcedure (SampleParameter);
+var
+  MyLocalVar, MyTimestamp, MyCmdLineResult;
+  MyLocalStringVar, MyCpAddress, MyLocalIntegerVar, MyLocalBooleanVar;
+  MyErrorCodeVar, MyErrorDescriptionVar;
+begin
+
+  //Option to output string to log window
+    {Paramter list:
+      - text to log}
+
+    Command.SendToLog ('Hello World');
+
+
+  //Option to transmit data back to connected host system
+    {Parameter list:
+      - data/text to send
+     Optional return value:
+      - Boolean (True=success / False=failure)}
+
+    MyLocalBooleanVar := Command.SendToHost ('Sample Transmit Data' + #13);
+
+
+  //Option to return a Boolean true result if the client is connected and authenticated with the CNS (ie. "left-side" is green)
+    MyLocalBooleanVar := Command.ClientIsOnlineWithCNS;
+
+
+  //Option to return a Boolean true result if the host system interface is online (ie. "right-side" is green)
+    MyLocalBooleanVar := Command.HostIsOnline;
+
+
+  //Option to transmit a callpoint event to server
+    //Note: assigning a custom tag value will result in the the HandleTagStatus method beging called
+    //      whenever the callpoint's status changes (ex: ack'd, callback, manual escalation, custom option selected, etc.)
+    {Paramter list:
+      - True=active/False=cancel,
+      - absolute address (note: client ID is prepended automatically, or precede the absolute address with a "-" character to disable the client ID prefix)
+      - default label,
+      - runtime fixed auxilliary info,
+    <the following are optional parameters>
+      - sub address (create multiple instances of the same callpoint),
+      - callpoint type/icon ID,
+      - runtime callback number (overrides default property, or inserted if "+" present in default property),
+      - auto update server with label text (True/False),
+      - default priority,
+      - custom event reference tag (will be passed back in HandleTagStatus event),
+      - delim list of custom text prompt options ("ref1:text1,ref2:text2, etc."),
+      - delim list of L1 auto-assigned device/user alias IDs,
+      - delim list of L2 auto-assigned device/user alias IDs,
+      - delim list of L3 auto-assigned device/user alias IDs,
+      - dynamic callpoint label,
+      - dynamic info,
+      - runtime aux info (overrides default property),
+      - user defined field info 1,
+      - user defined field info 2,
+      - user defined field info 3,
+      - user defined field info 4,
+      - user defined field info 5,
+      - runtime custom data lookup key (overrides default property),
+      - expected duration (seconds),
+      - auto-cancel duration (seconds),
+      - suspend duration (seconds),
+      - runtime auto-cancel on acknowledge count (overrides default property),
+      - dynamic owner location label,
+      - dynamic owner location ID,
+      - pending owner location label,
+      - pending owner location ID,
+      - only update an already active callpoint (True/False),
+      - auto-learn override location ID,
+      - client specific output formatting (overrides default property; use "!CR!" token or #13 char to separate entries),
+      - quiet data (user-supplied reference string that will be passed transparently into the callpoint activity table),
+      - linked instance ID (reference string used to associate distinct client instances),
+      - binary type (0=none,1=BMP,2=JPG,3=GIF,4=TIF,5=CMP,6=PNG,7=WMF,8=WAV,9=MP3,10=MPG,11=AVI,12=PDF,13=TXT,14=LOG,15=CSV,16=DOC,17=DOCX,18=XLS,19=XLSX,20=PPT,21=PPTX,22=URL,23=FileURL,24=CNXBIN,25=ZIP,26=7Z,27=RAR,28=XML,29=HTML,30=INI),
+      - binary info,
+      - binary file path or URL}
+
+    //Note: One or more optional custom data lookup macros may be inserted into any of the above callpoint parameters.
+    //      Each macro will be dynamically resolved by the CNS into the specified custom data field value(s) from
+    //      the referenced custom data record. For example, this could be used to lookup a custom data record by a
+    //      given patient ID, and then insert the patient's current location into the callpoint's absolute or sub address.
+
+    //      Example:
+    //        {INSERT_CUSTOM_DATA=[TOP_NODE=0003][SEARCH_FIELDS=1,2][SEARCH_VALUES=MRN46223622,MALE][RESPONSE_MACRO=!D0!][DEFAULT=UNKNOWN]}
+    //      Parameter Formatting:
+    //        [TOP_NODE=<optional top node used to filter custom data records>]
+    //        [SEARCH_FIELDS=<comma-delimited custom data field numbers (1-10) that correspond to search values>]
+    //        [SEARCH_VALUES=<comma-delimited lookup values for supplied search fields. Use "%"/"_" characters as multi/single character wildcards. Enclose a value in double-quotes if it contains a comma>]
+    //        [RESPONSE_MACRO=<a lookup macro that retrieves the desired custom data field values for insertion into the output string. Refer to the standard custom macro formatting dialog for examples>]
+    //        [DEFAULT=<supply an optional default value to be used if the lookup fails>]
+
+    Command.SendCpEventToServer (True, 'TEST-ABS-ADDRESS',
+      'My Callpoint Label', 'My Callpoint Fixed Aux Info',
+      '', 1448, '9,5551212', False, 99, 'MyCustomTag1234',
+      '1A:START,STOP,C123:PAUSE', '100,102', '', '999');
+
+
+  //Option to transmit a device/user alias page message request to server
+    {Parameter list:
+      - device/user paging alias ID,
+      - message text,
+      - callback number,
+      - priority,
+    <the following are optional parameters>
+      - message owner (determines visibility of history/reporting),
+      - delayed delivery (seconds),
+      - periodic paging mode (0=none 1=min 2=hr 3=day 4=wk 5=mth 6=yr),
+      - periodic page interval multiplier,
+      - periodic page count,
+      - dynamic native device ID (supplied value will replace "!DYNAMIC_DEV_ID!" token in device's Native Dev ID)}
+    Command.SendDevAliasPageToServer (100, 'This is a message', '1234', 0);
+
+
+  //Option to send a "callpoint status" event to the server (ex: alarm ack'd on source console or panel, etc.)
+    {Parameter list:
+      - absolute address (note: client id prepended automatically),
+      - callpoint label,
+      - callpoint host description,
+      - callpoint status code (see below for valid values),
+      - status detail text,
+    <the following is an optional parameter>
+      - release a suspended callpoint for dispatch (True/False)}
+    Command.SendCpNotifyStatusToServer ('TEST-ABS-ADDRESS2',
+      'Callpoint Label 2', 'Nurse call system', 1, '');
+
+
+    {Valid callpoint status codes:
+      1 = message acknowledged (ex: by nurse at master station)
+      2 = call placed to callpoint (ex: by nurse from master station)
+      4 = user aware of callpoint event (ex: by the nurse silencing the patient monitor)
+      100 = miscellaneous info update
+      -99 = miscellaneous error}
+
+
+  //Option to send a "device status" event to the server (ex: ack'd, callback initiated, escalated, etc.)
+    {Parameter list:
+      - event ID,
+      - device ID,
+      - device type/icon ID,
+      - device label,
+      - device status code (see below for valid values),
+      - status detail text}
+    Command.SendDevNotifyStatusToServer ('{B9290A73-A954-4278-A6AE-CC86C1A86627}',
+      234112, 2285, 'My Cell Phone', -4, 'Out of coverage');
+
+
+    {Valid device status codes:
+      -1 = message killed before delivery to user
+      -2 = target client offline (not applicable in script)
+      -3 = host system offline
+      -4 = error communicating with host
+      -5 = host system rejected message
+      -6 = user no answer (timeout)
+      -7 = user rejected message
+      -8 = device record does not specify valid target client ID(s)
+      -99 = miscellaneous error
+      1 = user saw message and terminated ("done")
+      2 = user saw message and chose to call audio dn
+      3 = user saw message and chose to escalate it
+      4 = user responded to notification but has not chosen an option yet ("user aware")
+      5 = user chose a custom menu option
+      6 = user saw message and chose to cancel it
+      10 = host system accepted message but not neccessarily delivered to user
+      100 = miscellaneous info update}
+
+
+  //Option to update an active callpoint by referencing the event ID
+    {Parameter list:
+      - sender info (brief description for delivery status and reporting),
+      - event ID,
+      - cp ID (for logging purposes only; use 0 if unknown),
+      - callpoint label (for logging purposes only),
+      - new priority (-1 = no change),
+    <the following are optional parameters>
+      - release suspended state (True/False),
+      - only dispatch updates to active alarm screens (True/False),
+      - dynamic callpoint label ('~' = no change),
+      - dynamic info ('~' = no change),
+      - user defined field info 1 ('~' = no change),
+      - user defined field info 2 ('~' = no change),
+      - user defined field info 3 ('~' = no change),
+      - user defined field info 4 ('~' = no change),
+      - user defined field info 5 ('~' = no change),
+      - expected duration in seconds (-1 = no change),
+      - auto-cancel duration in seconds (0 = no change / -1 = disable),
+      - suspend duration in seconds (-1 = no change),
+      - dynamic owner location label ('~' = no change; must be non-null for location change to take effect),
+      - dynamic owner location ID,
+      - pending owner location label ('~' = no change; must be non-null for pending location change to take effect),
+      - pending owner location ID,
+      - quiet data ('' = no change),
+      - linked instance ID ('' = no change)}
+    Command.SendEventIdUpdateToServer ('Workflow script',
+      '{B9290A73-A954-4278-A6AE-CC86C1A86627}', 321532, 'Test Callpoint',
+      -1, False, True, 'My dynamic label', '~', 'new user def 1 info');
+
+
+  //Option to cancel a callpoint by referencing an active event ID
+    {Parameter list:
+      - event ID,
+      - callpoint label,
+      - reason}
+    Command.SendEventIdCancelToServer ('{B9290A73-A954-4278-A6AE-CC86C1A86627}',
+      'My Callpoint', 'no available resources');
+
+
+  //Option to transmit an analog value to the server
+    {Paramter list:
+      - channel number (each analog source should be assigned a unique integer value. Used to associate one or more callpoints),
+      - analog value (supports positive and negative floating point numbers),
+      - units (text definition of the analog value type),
+    <the following are optional parameters>
+      - description (additional text detail),
+      - sample timestamp (must be in "MM/DD/YYYY HH:MM:SS AM/PM" format. Leave undefined to use server timestamp),
+      - reporting mode (0=use cp setting <default>, 1=disabled, 2=always, 3=only when associated cp triggered, 4=only if cp not triggered)}
+    Command.SendAnalogEventToServer (100, -17.25, 'Celsius',
+      'Lab samples freezer', '02/18/2009 02:38:03 PM', 2);
+
+
+  //Option to transmit a location change event to the server
+    {Paramter list:
+      - RTLS system ID (the numeric ID of the corresponding RTLS container object in the Connexall hierarchy),
+      - native location ID (string that uniquely defines the current location/area/zone on the host RTLS system - maps to Connexall location via alias logic),
+      - native tag ID (string that uniquely defines the trackable tag object on the host RTLS system),
+      - tag class (string used to classify the tag object for use in Connexall logic),
+    <the following are optional parameters>
+      - native location label (additional text detail),
+      - native tag label (additional text detail),
+      - event timestamp (must be in "MM/DD/YYYY HH:MM:SS AM/PM" format. Leave undefined to use server timestamp),
+      - miscellaneous payload (text field for future use)}
+    Command.SendLocChangeEventToServer (432151, 'RM101', 'PUMP-232',
+      'ASSET', 'Cardiology Room 101', 'Infusion pump #232', '02/18/2009 02:38:03 PM');
+
+
+  //Option to transmit a custom data record to the server
+    {Paramter list:
+      - lookup key (used to match custom data record on server),
+      - record enabled (-1=no change, 0=disable, 1=enable),
+    <the following are optional parameters>
+      - field 1 enabled (-1=no change, 0=disable, 1=enable),
+      - field 1 label,
+      - field 1 text data,
+      - field 2 enabled (-1=no change, 0=disable, 1=enable),
+      - field 2 label,
+      - field 2 text data,
+      - field 3 enabled (-1=no change, 0=disable, 1=enable),
+      - field 3 label,
+      - field 3 text data,
+      - field 4 enabled (-1=no change, 0=disable, 1=enable),
+      - field 4 label,
+      - field 4 text data,
+      - field 5 enabled (-1=no change, 0=disable, 1=enable),
+      - field 5 label,
+      - field 5 text data,
+      - field 6 enabled (-1=no change, 0=disable, 1=enable),
+      - field 6 label,
+      - field 6 text data,
+      - field 7 enabled (-1=no change, 0=disable, 1=enable),
+      - field 7 label,
+      - field 7 text data,
+      - field 8 enabled (-1=no change, 0=disable, 1=enable),
+      - field 8 label,
+      - field 8 text data,
+      - field 9 enabled (-1=no change, 0=disable, 1=enable),
+      - field 9 label,
+      - field 9 text data,
+      - field 10 enabled (-1=no change, 0=disable, 1=enable),
+      - field 10 label,
+      - field 10 text data,
+      - auto-learn node label,
+      - auto-learn type/icon ID,
+      - auto-learn override location ID
+      - sub-key data (used to differentiate between updates for an existing [patient] record in the stacked records, or the addition of a new [patient] record)
+      - clear sub-key data (True/False))}
+    Command.SendCustomDataToServer ('BED100B', -1, 1,
+      'Patient', 'Mr. John Doe', 1, 'Doctor', 'Dr. Smith');
+
+
+  //Option to transmit an assignment plan state change to the server
+    {Paramter list:
+      - plan ID (integer that matches an existing plan's ID),
+      - new plan state (0=manual inactive, 1=manual active),
+    <the following are optional parameters>
+      - plan label (optional text string to improve readability of logging)}
+    Command.SendPlanStateChangeToServer (7425101, 1, 'Day Shift Plan');
+
+
+  //Option to send a manual page event directly to a notification client
+    {Parameter list:
+      - native dev ID
+      - priority
+      - callback number
+      - text message
+      - destination client ID}
+    Command.SendManualPageRelayToClient ('556', 10,
+      '1234', 'Hello world!', 'WTC002');
+
+
+  //Option to get the current millisecond timer count from the OS
+    {Parameter list: <none>}
+    MyTimestamp := Command.GetMsecCount;
+
+
+  //Option calculate the elapsed milliseconds between "now" and supplied msec counter value
+    {Parameter list:
+      - original millisecond count}
+    MyLocalVar := Command.GetElapsedMsec (MyTimestamp);
+
+
+  //Option to execute a command line and return the result
+    {Parameter list:
+      - command line string,
+      - show window (True/False)}
+    MyCmdLineResult := Command.ExecuteCommandLine ('notepad.exe', True);
+
+
+  //Option to execute a command line and wait untill the process terminates before returning the result
+    {Parameter list:
+      - command line string,
+      - show window (True/False)}
+    MyCmdLineResult := Command.ExecuteCommandLineWait ('launcher.exe', True);
+
+
+  //Option to suspend execution of the script for a predefined duration
+    //Note: it is not recommended to use sleep values in excess of ~2000 milliseconds as it may affect the performance of the client
+    {Parameter list:
+      - sleep duration in milliseconds}
+    Command.Sleep (1200);
+
+
+  //Option to extract the path portion of a file path string up to an including the trailing backslash
+    {Parameter list:
+      - file path string}
+    MyLocalVar := Command.ExtractFilePath ('c:\windows\notepad.exe'); //will return "c:\windows\"
+
+
+  //Option to extract the name portion of a file path string
+    {Parameter list:
+      - file path string}
+    MyLocalVar := Command.ExtractFileName ('c:\windows\notepad.exe'); //will return "notepad.exe"
+
+
+  //Option to extract the extension portion of a file path string
+    {Parameter list:
+      - file path string}
+    MyLocalVar := Command.ExtractFileExt ('c:\windows\notepad.exe'); //will return ".exe"
+
+
+  //Option to return a Boolean true result if the supplied file path points to a valid file
+    {Parameter list:
+      - file path string}
+    MyLocalBooleanVar := Command.FileExists ('c:\windows\notepad.exe');
+
+
+  //Option to delete file from the disk
+    {Parameter list:
+      - file path string}
+    Command.DeleteFile ('c:\temp\mytempfile.txt');
+
+
+  //Option to extract a string parameter value from a source string
+    {Parameter list:
+      - parameter header string,
+      - source string,
+      - parameter is unterminated free-form text at end of source string (True/False),
+    <the following are optional parameters>
+      - default string result if parameter is not found}
+    MyLocalStringVar := Command.GetRxDataParamString ('[LABEL=', '[LABEL=ABC][TYPE=2100]|SAMPLE_BOOL=TRUE', False, '<unknown>');
+
+
+  //Option to extract an integer parameter value from a source string
+    {Parameter list:
+      - parameter header string,
+      - source string,
+      - default integer result if parameter is not found}
+    MyLocalIntegerVar := Command.GetRxDataParamInteger ('[TYPE=', '[LABEL=ABC][TYPE=1100]|SAMPLE_BOOL=TRUE', 1900);
+
+
+  //Option to extract a Boolean parameter value from a source string
+    {Parameter list:
+      - parameter header string,
+      - source string,
+      - default Boolean result if parameter is not found (True/False)}
+    MyLocalBooleanVar := Command.GetRxDataParamBoolean ('|SAMPLE_BOOL=', '[LABEL=ABC][TYPE=2100]|SAMPLE_BOOL=TRUE', False);
+
+
+  //Option to remove a parameter header and its value from a string (returns True if parameter was found & removed)
+    {Parameter list:
+      - parameter header string,
+      - source parameter string (passed by "var" reference)}
+    MyLocalBooleanVar := Command.RemoveRxDataParam ('|SAMPLE_DATA=', MyLocalStringVar);
+
+
+  //Option to return a string result from a Boolean value
+    {Parameter list:
+      - source Boolean value (True/False),
+      - string result if above value is True,
+      - string result if above value is False}
+    MyLocalStringVar := Command.MakeBoolString (MyLocalBooleanVar, 'ON', 'OFF');
+
+
+  //Option to return a Boolean result from a binary state string value (ex: ON/OFF, YES/NO, HIGH/LOW, ACTIVE/CANCEL, etc.)
+    {Parameter list:
+      - source string value,
+    <the following are optional parameters>
+      - default Boolean result if string not in recognized list (True/False)}
+    MyLocalBooleanVar := Command.StringToBool ('ON', False);
+
+
+  //Option to remove non-printable ASCII characters from a string
+    {Parameter list:
+      - source string value (passed by "var" reference),
+    <the following are optional parameters>
+      - allow extended character set (True/False)}
+    Command.RemoveNonPrintableChars (MyLocalStringVar, False);
+
+
+  //Option to remove non-alphanumeric characters from a string (only allow '0'..'9', 'A'..'Z', 'a'..'z')
+    {Parameter list:
+      - source string value (passed by "var" reference)}
+    Command.RemoveNonAlphaNumericChars (MyLocalStringVar);
+
+
+  //Option to remove non-numeric characters from a string (only allow '0'..'9')
+    {Parameter list:
+      - source string value (passed by "var" reference)}
+    Command.RemoveNonNumericChars (MyLocalStringVar);
+
+
+  //Option to remove duplicate space characters from a string
+    {Parameter list:
+      - source string value (passed by "var" reference)}
+    Command.RemoveDupeSpaces (MyLocalStringVar);
+
+
+  //Option to replace special characters from a raw callpoint address string (' ' space, '_' underscore, and '%' percent are replaced with a '-' hyphen)
+    {Parameter list:
+      - source callpoint address string value}
+    MyCpAddress := Command.GetCleanAddressString (MyLocalStringVar);
+
+
+  //Option to return an encrypted version a string (returns True if encryption succeeded)
+    {Parameter list:
+      - encryption algorithm name ('AES-128', 'AES-192', 'AES-256', 'TEA', 'CAST', 'DES', '3DES', 'BLOWFISH-128', 'BLOWFISH-256', 'BLOWFISH-448', 'TWOFISH-128', 'TWOFISH-256'),
+      - password/secret key string (Note: ensure password length conforms to proper encryption standard),
+      - initialization vector (Note: pass a null string to have the script automatically generate values for the secret key and initialization vector using the PKCS5 password digest algorithm),
+      - source string to be encrypted,
+      - encrypted result string (passed by "var" reference),
+      - encryption error code (passed by "var" reference),
+      - encryption error description (passed by "var" reference)}
+    MyLocalBooleanVar := Command.GetEncryptedString ('AES-256', 'My256BitPassword0123456789012345', 'My128BitInitVect', 'My string to be encrypted.', MyLocalStringVar, MyErrorCodeVar, MyErrorDescriptionVar);
+
+
+  //Option to return a decrypted version of a previously encrypted string (returns True if decryption succeeded)
+    {Parameter list:
+      - encryption algorithm name (see list of algorithms for GetEncryptedString method),
+      - password/secret key string (see GetEncryptedString method for details),
+      - initialization vector (see GetEncryptedString method for details),
+      - source string to be decrypted,
+      - decrypted result string (passed by "var" reference),
+      - decryption error code (passed by "var" reference),
+      - decryption error description (passed by "var" reference)}
+    MyLocalBooleanVar := Command.GetDecryptedString ('AES-256', 'My256BitPassword0123456789012345', 'My128BitInitVect', 'My string to be decrypted.', MyLocalStringVar, MyErrorCodeVar, MyErrorDescriptionVar);
+
+
+  //Option to return an encoded version of a string (returns True if encoding succeeded)
+    {Parameter list:
+      - encoding algorithm name ('BASE64', 'URL', 'HEX', 'HTML', 'QP', 'UTF7', 'UTF8'),
+      - source string to be encoded,
+      - encoded result string (passed by "var" reference),
+      - encoding error code (passed by "var" reference),
+      - encoding error description (passed by "var" reference)}
+    MyLocalBooleanVar := Command.GetEncodedString ('BASE64', 'My string to be encoded.', MyLocalStringVar, MyErrorCodeVar, MyErrorDescriptionVar);
+
+
+  //Option to return a decoded version of a previously encoded string (returns True if decoding succeeded)
+    {Parameter list:
+      - encoding algorithm name (see list of algorithms for GetEncodedString method),
+      - source string to be decoded,
+      - decoded result string (passed by "var" reference),
+      - decoding error code (passed by "var" reference),
+      - decoding error description (passed by "var" reference)}
+    MyLocalBooleanVar := Command.GetDecodedString ('BASE64', 'My string to be decoded.', MyLocalStringVar, MyErrorCodeVar, MyErrorDescriptionVar);
+
+
+  //Option to return a hashed version a string
+    {Parameter list:
+      - hashing algorithm name ('SHA-1', 'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512', 'SHA3-224', 'SHA3-256', 'SHA3-384', 'SHA3-512', 'MD5', 'HMAC-MD5', 'HMAC-SHA-1', 'HMAC-SHA-224', 'HMAC-SHA-256', 'HMAC-SHA-384', 'HMAC-SHA-512'),
+      - source string to be hashed
+    <the following are optional parameters>
+      - secret HMAC key (only used with HMAC algorithms)}
+    MyLocalStringVar := Command.GetHashedString ('HMAC-SHA-1', 'My string to be hashed.', 'my hashing key');
+
+
+  //Option to return a random [32 bit] integer
+    {Parameter list:
+    <the following are optional parameters>
+      - low range (default = 0),
+      - high range (default = High(integer))}
+    MyLocalIntegerVar := Command.GetRandomInteger (1000, 9999);
+
+
+  //Option to return a string populated with random bytes
+    {Parameter list:
+      - string length}
+    MyLocalStringVar := Command.GetRandomStringOfBytes (16);
+
+
+  //Option to return a string populated with random ASCII "printable" characters
+    {Parameter list:
+      - string length}
+    MyLocalStringVar := Command.GetRandomStringOfPrintableASCII (16);
+
+
+  //Option to return a URL encoded string. This method can also be used to decode.
+    {Parameter list:
+      - encode/decode Boolean flag (encode=True / decode=False),
+      - source string to be encoded/decoded,
+    <the following are optional parameters>
+      - encode spaces as plus ("+") characters (True/False)}
+    MyLocalStringVar := Command.GetUrlEncodedString (True, 'source string to URL encode', True);
+
+
+  //Option to encode XML entities within a string.
+    {Parameter list:
+      - source string to be encoded}
+    MyLocalStringVar := Command.EncodeXmlEntities ('source string with <"&"> characters');
+
+
+  //Option to decode a string containing XML entities.
+    {Parameter list:
+      - source string to be decoded,
+    <the following are optional parameters>
+      - ignore decoding of non-printable characters (True/False)}
+    MyLocalStringVar := Command.DecodeXmlEntities ('source string with &lt;&quot;&amp;&quot;&gt; characters', True);	
+
+
+	//Option to extract a string attribute value from an XML element.
+    {Parameter list:
+      - source string containing XML element with attribute(s),
+      - attribute name to search for,
+    <the following are optional parameters>
+      - default return value if attribute not found}
+    MyLocalStringVar := Command.GetXmlAttributeAsString ('<item att1="val1" att2="val2">value</item>', 'att1', '<unknown>');	
+
+
+  //Option to extract an integer attribute value from an XML element.
+    {Parameter list:
+      - source string containing XML element with attribute(s),
+      - attribute name to search for,
+    <the following are optional parameters>
+      - default return value if attribute not found}
+    MyLocalIntegerVar := Command.GetXmlAttributeAsInteger ('<item att1="10" att2="20">value</item>', 'att1', -1);	
+
+
+  //Option to extract a Boolean attribute value from an XML element.
+    {Parameter list:
+      - source string containing XML element with attribute(s),
+      - attribute name to search for,
+    <the following are optional parameters>
+      - default return value if attribute not found}
+    MyLocalBooleanVar := Command.GetXmlAttributeAsBoolean ('<item att1="true" att2="false">value</item>', 'att1', False);	
+
+
+  //Option to confirm that an attribute/value pair was found within an XML element.
+    {Parameter list:
+      - source string containing XML element with attribute(s),
+      - attribute name to search for,
+      - matching attribute value to search}
+    MyLocalBooleanVar := Command.FoundMatchingXmlAttributeValue ('<item att1="hello" att2="world">value</item>', 'att1', 'hello');	
+
+
+  //Option to extract a string element from an XML document string.
+    {Parameter list:
+      - element name to search for,
+      - source XML document string,
+      - variable to hold any attributes from the returned element,
+    <the following are optional parameters>
+      - default return value if element not found,
+      - decode XML entities in return value (True/False),
+      - qualify search with an element containing an attribute named "X",
+      - qualify search with an element containing an attribute value of "X"}
+    MyLocalStringVar := Command.GetXmlElementAsString ('item', '<body><item att1="hello">value</item><another>second</another></body>', MyLocalVar);
+
+
+  //Option to extract an integer element from an XML document string.
+    {Parameter list:
+      - element name to search for,
+      - source XML document string,
+      - variable to hold any attributes from the returned element,
+    <the following are optional parameters>
+      - default return value if element not found,
+      - decode XML entities in return value (True/False),
+      - qualify search with an element containing an attribute named "X",
+      - qualify search with an element containing an attribute value of "X"}
+    MyLocalIntegerVar := Command.GetXmlElementAsInteger ('item', '<body><item att1="hello">10</item><another>20</another></body>', MyLocalVar);
+
+
+  //Option to extract a Boolean element from an XML document string.
+    {Parameter list:
+      - element name to search for,
+      - source XML document string,
+      - variable to hold any attributes from the returned element,
+    <the following are optional parameters>
+      - default return value if element not found,
+      - decode XML entities in return value (True/False),
+      - qualify search with an element containing an attribute named "X",
+      - qualify search with an element containing an attribute value of "X"}
+    MyLocalBooleanVar := Command.GetXmlElementAsBool ('item', '<body><item att1="hello">true</item><another>false</another></body>', MyLocalVar);	
+
+
+
+
+  //Option to save a value to a persistent global variable
+    {Parameter list:
+      - global variable index (0-255),
+      - value to store in indexed global variable}
+    Command.SetGlobalVar (0, 'This is my data');
+    Command.SetGlobalVar (4, 52345.345);
+    Command.SetGlobalVar (8, True);
+    Command.SetGlobalVar (9, 4255);
+
+
+  //Option to retrieve a value from a persistent global variable
+    {Parameter list:
+      - global variable index (0-255)}
+    MyLocalVar := Command.GetGlobalVar (4);
+
+
+  //Option to start a timer that will call the TimerEvent procedure at a given interval
+    {Parameter list:
+      - interval duration in milliseconds}
+    Command.EnableTimer (1000);
+
+  //Option to stop the timer events
+    Command.DisableTimer;
+
+
+  //Note: The following examples illustrate how to access the functionality
+  //      found in several of the standard Delphi units.
+
+    //Classes example using TStringList:
+    {
+      uses Classes; // Note: This statement must be declared as the first line of the script
+
+      ...
+
+      PhonesStringList := TStringList.Create;
+      PhonesStringList.Add ('Phone A');
+      PhonesStringList.Add ('Phone B');
+      PhonesStringList.Add ('Phone C');
+
+      for i := 0 to PhonesStringList.Count -1 do
+        Command.SendToLog (PhonesStringList.Strings[i]);
+
+      PhonesStringList.Free;
+    }
+
+    //System utilities example using StringReplace function:
+    {
+      uses SysUtils; // Note: This statement must be declared as the first line of the script
+
+      ...
+
+      TextBefore := 'This is a message to show. A small message.';
+      TextAfter := StringReplace (TextBefore, 'a',' THE ', 3);
+        //The last parameter of StringReplace is a bit-mapped representation of the following set options:
+        // 0 = [] = Bit: 0000
+        // 1 = [rfReplaceAll] = Bit: 0001
+        // 2 = [rfIgnoreCase] = Bit: 0010
+        // 3 = [rfIgnoreCase, rfReplaceAll] = Bit: 0011
+
+      Command.SendToLog('TextBefore = ' + TextBefore);
+      Command.SendToLog('TextAfter  = ' + TextAfter);
+    }
+
+    //Read and write to INI files example:
+    {
+      uses IniFiles; // Note: This statement must be declared as the first line of the script
+
+      ...
+
+      IniFile := TIniFile.Create ('c:\myfile.ini');
+
+      IniFile.WriteInteger ('MY_INI_SECTION', 'MyIntegerSetting', 1000);
+      IniFile.WriteString ('MY_INI_SECTION', 'MyStringSetting', 'hello world!');
+      IniFile.WriteBool ('MY_INI_SECTION', 'MyBooleanSetting', False);
+
+      MyIntegerVar := IniFile.ReadInteger ('MY_INI_SECTION','MyIntegerSetting', -1);//last param is default value if setting not found in INI file
+      MyStringVar := IniFile.ReadString ('MY_INI_SECTION', 'MyStringSetting', '?'); //ditto
+      MyBooleanVar := IniFile.ReadBool ('MY_INI_SECTION', 'MyBooleanSetting', True); //ditto
+
+      Command.SendToLog ('IntegerSetting  = ' + IntToStr (MyIntegerVar));
+      Command.SendToLog ('StringSetting  = ' + MyStringVar);
+      Command.SendToLog ('BooleanSetting  = ' + Command.MakeBoolString (MyBooleanVar, 'TRUE', 'FALSE'));
+
+      IniFile.EraseSection ('MY_INI_SECTION');
+      IniFile.Free;
+    }
+end;
