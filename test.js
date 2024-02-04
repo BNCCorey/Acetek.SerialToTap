@@ -16,16 +16,14 @@ port.open(function (err) {
   }
   setTimeout(() => {
     // for loop with each loop delayed by a variable to send another variable amoutn of strings to the serial port
-    for (let i = 1; i <= 100; i++) {
-      setTimeout(() => {
-        port.write(`#Duress #Cancelled #Fob ${i} #Main Hub\r`, function (err) {
-          if (err) {
-            return console.log("Error on write: ", err.message);
-          }
-          console.log(`#Duress #Cancelled #Fob ${i} #Main Hub\r`);
-        });
-        port.drain();
-      }, i * 50);
+    for (let i = 1; i < 4; i++) {
+      port.write(`ANL1S15 Test Alarm ${i}\r`, function (err) {
+        if (err) {
+          return console.log("Error on write: ", err.message);
+        }
+        console.log(`ANL1S15 Test Alarm ${i}\r`);
+      });
+      port.drain();
     }
   }, 2000);
 });

@@ -38,15 +38,20 @@
 
    v1.6
    - Heavy refactor to use a queue for messages and change control flow
+   - Removed unused variables
 
-
-
+   v1.7
+   - Update checksum calculation
+   - Increase queue size to 20 and reduce buffer size to 50
+   
 */
 
 #include <SPI.h>
 #include <Ethernet.h>
 
-// CONTROL CHARACTERS
+////////////////////////////////////////////////////
+// Control Characters and Variables
+////////////////////////////////////////////////////
 int STX = 0x02;
 int ETX = 0x03;
 int EOT = 0x04;
@@ -59,11 +64,9 @@ int newLine = 0x0A;     // <LF>
 int CR = 0x0D;          // <CR>
 String CapCode = "919"; // Capcode appended to incoming strings.
 
-// VARIABLES
-
-#define MAX_QUEUE_SIZE 10   // Define the maximum size of the queue
+#define MAX_QUEUE_SIZE 20   // Define the maximum size of the queue
 #define MAX_FAILURE_COUNT 2 // Define the maximum size of the queue
-#define BUFFER_SIZE 100     // Define the maximum size of the queue
+#define BUFFER_SIZE 50      // Define the maximum size of the queue
 bool DEBUG = false;
 
 ////////////////////////////////////////////////////
@@ -153,7 +156,7 @@ void readSerial()
     char ch = Serial.read();
 
     // Handle message end (CR) and possibly other conditions
-    if (ch == CR || dataLength >= BUFFER_SIZE - 1 || ch == '\n' || ch == '\r' || ch == '\0')
+    if (ch == CR || dataLength >= BUFFER_SIZE - 1 || ch == '\n' || ch == '\0')
     {
       if (dataLength > 0)
       {                                  // ensure there's data to process
@@ -178,10 +181,6 @@ void calculateCheckSumAndEnqueue(char *data)
 
   Message message;
   message.data = messageStr;
-  // ... rest of your processing and checksum code ...
-
-  // CheckSum
-  //////////////////
 
   // Part 1:-
   // Convert to Decimal, and message.checkSum them all together
@@ -234,8 +233,12 @@ void calculateCheckSumAndEnqueue(char *data)
   B += 48;
   C += 48;
 
+  char sumA = A;
+  char sumB = B;
+  char sumC = C;
+
   // make a string with these chars
-  message.checkSum = String(A) + String(B) + String(C);
+  message.checkSum = String(sumA) + String(sumB) + String(sumC);
 
   if (DEBUG)
   {
